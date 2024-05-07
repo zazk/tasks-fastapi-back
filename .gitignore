@@ -187,3 +187,4 @@ pyrightconfig.json
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+.DS_Store

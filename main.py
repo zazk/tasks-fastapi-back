@@ -3,10 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from sqlalchemy.orm import Session
 
-import models
 from models import Tasks, Base, Users
 from database import engine, get_db
-from schema import TaskSchema, UserSchema
+from schema import TaskSchema, UserBase, UserLogin, UserSchema
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,8 +50,9 @@ async def update_task(db: db_dependency, task_request: TaskSchema, task_id: int 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Task not found')
         
     for var, value in vars(task_request).items():
-        setattr(task, var, value) if value else None
+        setattr(task, var, value) if value !=None else None
     db.commit()
+    db.refresh(task)
 
 @app.delete('/tasks/{task_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(db: db_dependency, task_id: int = Path(gt=0)):
@@ -66,7 +66,7 @@ async def delete_task(db: db_dependency, task_id: int = Path(gt=0)):
 
 # User Requests
 @app.post("/users", status_code=status.HTTP_201_CREATED)
-async def create_task(user_request: UserSchema, db: Session = Depends(get_db)):
+async def create_user(user_request: UserSchema, db: Session = Depends(get_db)):
     task = Users(**user_request.model_dump())
     db.add(task) 
     db.commit()
@@ -74,11 +74,11 @@ async def create_task(user_request: UserSchema, db: Session = Depends(get_db)):
     return task
 
 @app.get('/users', status_code=status.HTTP_200_OK)
-async def read_all_products(db: db_dependency):
+async def read_all_users(db: db_dependency):
     return db.query(Users).all()
 
 @app.delete('/users/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(db: db_dependency, user_id: int = Path(gt=0)):
+async def delete_user(db: db_dependency, user_id: int = Path(gt=0)):
     user = db.query(Users).filter(Users.id == user_id).first()
 
     if user is None:
@@ -86,3 +86,13 @@ async def delete_task(db: db_dependency, user_id: int = Path(gt=0)):
     
     db.delete(user)
     db.commit()
+
+
+@app.post('/users/login', status_code=status.HTTP_202_ACCEPTED, response_model=UserBase)
+async def login_user(user_request: UserLogin, db: db_dependency):
+    user = db.query(Users).filter( Users.email == user_request.email , Users.password == user_request.password ).first()
+
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+    
+    return user

@@ -2,13 +2,14 @@ from typing import List, Union
 from pydantic import BaseModel, Field
 from models import KindEnum
 
+class UserBase(BaseModel):
+    username: str
+    email: str
+    fullname: str
+    token: str 
 
-class UserSchema(BaseModel):
-    username: str = Field(min_length=3)
-    email: str = Field(min_length=3)
-    fullname: str = Field(min_length=3)
+class UserSchema(UserBase):
     password: str = Field(min_length=3)
-    token: str = Field(min_length=3)
     status: bool = Field(default=True)
     class Config:  
         from_attributes = True
@@ -24,3 +25,8 @@ class TaskSchema(BaseModel):
     class Config:  
         use_enum_values = True
         from_attributes = True
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
